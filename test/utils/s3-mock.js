@@ -72,9 +72,11 @@ module.exports = function (s3) {
     callback(null, results)
   })
 
-  mocks.upload = standin.replace(s3, 'upload', (stand, params, callback) => {
+  mocks.upload = standin.replace(s3, 'upload', (stand, params, options, callback) => {
     expect(params.Key).to.be.a('string')
     expect(params.Body).to.be.instanceof(Buffer)
+    expect(options.partSize).to.be.a('number')
+    expect(options.queueSize).to.be.a('number')
     storage[params.Key] = params.Body
     callback(null)
   })

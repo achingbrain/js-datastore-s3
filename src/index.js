@@ -19,7 +19,13 @@ const pull = require('pull-stream')
 
 /* :: export type S3DSInputOptions = {
   s3: S3Instance,
-  createIfMissing: ?boolean
+  createIfMissing: ?boolean,
+  uploadOptions?: UploadOptionsInstance
+}
+
+declare type UploadOptionsInstance = {
+  partSize?: number,
+  queueSize?: number
 }
 
 declare type S3Instance = {
@@ -48,12 +54,18 @@ class S3Datastore {
   /* :: opts: S3DSInputOptions */
   /* :: bucket: string */
   /* :: createIfMissing: boolean */
+  /* :: uploadOptions: UploadOptionsInstance */
 
   constructor (path /* : string */, opts /* : S3DSInputOptions */) {
     this.path = path
     this.opts = opts
     const {
       createIfMissing = false,
+      // https://docs.aws.amazon.com/AWSJavaScriptSDK/latest/AWS/S3.html#upload-property
+      uploadOptions  = {
+        partSize: 10 * 1024 * 1024,
+        queueSize: 1
+      },
       s3: {
         config: {
           params: {
@@ -67,6 +79,7 @@ class S3Datastore {
     assert(typeof createIfMissing === 'boolean', `createIfMissing must be a boolean but was (${typeof createIfMissing}) ${createIfMissing}`)
     this.bucket = Bucket
     this.createIfMissing = createIfMissing
+    this.uploadOptions = uploadOptions
   }
 
   /**
@@ -91,7 +104,7 @@ class S3Datastore {
     this.opts.s3.upload({
       Key: this._getFullKey(key),
       Body: val
-    }, (err, data) => {
+    }, this.uploadOptions, (err, data) => {
       if (err && err.code === 'NoSuchBucket' && this.createIfMissing) {
         return this.opts.s3.createBucket({}, (err) => {
           if (err) return callback(err)

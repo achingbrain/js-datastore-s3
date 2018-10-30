@@ -32,6 +32,14 @@ describe('S3Datastore', () => {
       const store = new S3Store('.ipfs', { s3, createIfMissing: true })
       expect(store.createIfMissing).to.equal(true)
     })
+    it('overrides upload options', () => {
+      const queueSize = 100
+      const partSize = 500
+      const s3 = new S3({ params: { Bucket: 'test' } })
+      const store = new S3Store('.ipfs', { s3, uploadOptions: { queueSize, partSize } })
+      expect(store.uploadOptions.queueSize).to.equal(queueSize)
+      expect(store.uploadOptions.partSize).to.equal(partSize)
+    })
   })
 
   describe('put', () => {
@@ -39,7 +47,7 @@ describe('S3Datastore', () => {
       const s3 = new S3({ params: { Bucket: 'my-ipfs-bucket' } })
       const store = new S3Store('.ipfs/datastore', { s3 })
 
-      standin.replace(s3, 'upload', function (stand, params, callback) {
+      standin.replace(s3, 'upload', function (stand, params, options, callback) {
         expect(params.Key).to.equal('.ipfs/datastore/z/key')
         stand.restore()
         callback(null)
@@ -56,7 +64,7 @@ describe('S3Datastore', () => {
       // 3. upload is then called a second time and it passes
 
       let bucketCreated = false
-      standin.replace(s3, 'upload', (stand, params, callback) => {
+      standin.replace(s3, 'upload', (stand, params, options, callback) => {
         if (!bucketCreated) {
           const err = { code: 'NoSuchBucket' }
           return callback(err)
@@ -78,7 +86,7 @@ describe('S3Datastore', () => {
       const store = new S3Store('.ipfs/datastore', { s3, createIfMissing: false })
 
       let bucketCreated = false
-      standin.replace(s3, 'upload', (stand, params, callback) => {
+      standin.replace(s3, 'upload', (stand, params, options, callback) => {
         if (!bucketCreated) {
           const err = { code: 'NoSuchBucket' }
           return callback(err)
@@ -103,7 +111,7 @@ describe('S3Datastore', () => {
       const s3 = new S3({ params: { Bucket: 'my-ipfs-bucket' } })
       const store = new S3Store('.ipfs/datastore', { s3 })
 
-      standin.replace(s3, 'upload', function (stand, params, callback) {
+      standin.replace(s3, 'upload', function (stand, params, options, callback) {
         expect(params.Key).to.equal('.ipfs/datastore/z/key')
         stand.restore()
         callback(new Error('bad things happened'))
